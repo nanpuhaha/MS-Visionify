@@ -61,8 +61,8 @@ if circles is not None:
         im2, contours, hierachy = cv2.findContours(cropped, cv2.RETR_TREE , cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(cropped_color,contours,-1,(167,143,255),1)
         temp = np.zeros([60,60], np.uint8)
-        for y in range(0, 60):
-            for x in range(0, 60):
+        for y in range(60):
+            for x in range(60):
                 if (cropped_color[y,x].tolist() == [167,143,255]):
                     temp[y,x] = 255
 
@@ -93,23 +93,25 @@ for circ in circle_roi:
     w = circ_black.shape[1]
     h = circ_black.shape[0]
 
-    for y in range(0,h):
-        for x in range(0,w):
-            if distance(30,30, x, y) <= circle_radius:
-                if circ_black[y,x] == 255:
-                    fixed_x = x - 30
-                    fixed_y = y - 30
+    for y in range(h):
+        for x in range(w):
+            if (
+                distance(30, 30, x, y) <= circle_radius
+                and circ_black[y, x] == 255
+            ):
+                fixed_x = x - 30
+                fixed_y = y - 30
 
-                    if fixed_y > 0:
-                        if fixed_x > 0:
-                            quadrants[0] += 1
-                        elif fixed_x < 0:
-                            quadrants[1] += 1
-                    elif fixed_y < 0:
-                        if fixed_x > 0:
-                            quadrants[3] += 1
-                        elif fixed_x < 0:
-                            quadrants[2] += 1
+                if fixed_y > 0:
+                    if fixed_x > 0:
+                        quadrants[0] += 1
+                    elif fixed_x < 0:
+                        quadrants[1] += 1
+                elif fixed_y < 0:
+                    if fixed_x > 0:
+                        quadrants[3] += 1
+                    elif fixed_x < 0:
+                        quadrants[2] += 1
 
     print("top vs bottom", quadrants[0]+quadrants[1], quadrants[2]+quadrants[3])
     print("left vs right", quadrants[1]+quadrants[2], quadrants[0]+quadrants[3])

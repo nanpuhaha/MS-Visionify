@@ -37,7 +37,7 @@ class RuneDetector:
         fh.setLevel(logging.DEBUG)
         fh.setFormatter(formatter)
         self.logger.addHandler(fh)
-        self.labels = labels if labels else {'down': 0, 'left': 1, 'right': 2, 'up': 3}
+        self.labels = labels or {'down': 0, 'left': 1, 'right': 2, 'up': 3}
         self.model_path = model_path
         with device("/cpu:0"):  # Use cpu for evaluation
             model = load_model(self.model_path)
@@ -50,8 +50,8 @@ class RuneDetector:
         self.rune_roi_1024 = [295, 180, 500, 133]
         self.rune_roi_800 = [170,200, 440, 135]
         self.rune_roi = self.rune_roi_800  # set as default rune roi
-        self.screen_processor = MapleScreenCapturer() if not screen_capturer else screen_capturer
-        self.key_mgr = KeyboardInputManager() if not key_mgr else key_mgr
+        self.screen_processor = screen_capturer or MapleScreenCapturer()
+        self.key_mgr = key_mgr or KeyboardInputManager()
 
     def capture_roi(self):
         screen_rect = self.screen_processor.ms_get_screen_rect(self.screen_processor.ms_get_screen_hwnd())
@@ -86,22 +86,15 @@ class RuneDetector:
 
         circles = cv2.HoughCircles(gray_img, cv2.HOUGH_GRADIENT, 1, gray_img.shape[0] / 8, param1=100, param2=30, minRadius=18, maxRadius=30)
         temp_list = []
-        img_index = 1
         if circles is not None:
             circles = np.round(circles[0, :]).astype("int")
-            for (x, y, r) in circles:
+            for img_index, (x, y, r) in enumerate(circles, start=1):
 
                 cropped = gray_img[max(0, int(y - 60 / 2)):int(y + 60 / 2), max(0, int(x - 60 / 2)):int(x + 60 / 2)].astype(np.float32)
 
                 temp_list.append((cropped, (x, y)))
-                img_index += 1
-
         temp_list = sorted(temp_list, key= lambda x: x[1][0])
-        return_list = []
-        for image in temp_list:
-            return_list.append(image[0])
-
-        return return_list
+        return [image[0] for image in temp_list]
 
     def images2tensor(self, img_list):
         """
@@ -122,9 +115,9 @@ class RuneDetector:
         result = self.model.predict(tensor, batch_size=batch_size)
         for res in result:
             final_class = np.argmax(res, axis=-1)
-            for key, val in self.labels.items():
-                if final_class == val:
-                    return_list.append(key)
+            return_list.extend(
+                key for key, val in self.labels.items() if final_class == val
+            )
 
         return return_list
 
@@ -143,16 +136,16 @@ class RuneDetector:
         if GetKeyState(VK_NUMLOCK):
             self.key_mgr.single_press(DIK_NUMLOCK)
             time.sleep(0.2)
-        self.logger.debug("Solved rune with solution %s"%(str(result)))
+        self.logger.debug(f"Solved rune with solution {str(result)}")
         for inp in result:
-            if inp == "up":
-                self.key_mgr.single_press(DIK_UP)
-            elif inp == "down":
+            if inp == "down":
                 self.key_mgr.single_press(DIK_DOWN)
             elif inp == "left":
                 self.key_mgr.single_press(DIK_LEFT)
             elif inp == "right":
                 self.key_mgr.single_press(DIK_RIGHT)
+            elif inp == "up":
+                self.key_mgr.single_press(DIK_UP)
             time.sleep(0.1)
         return len(processed_imgs)
 
@@ -169,9 +162,7 @@ class RuneDetector:
         if len(processed_imgs) != 4:
             return -1
         tensor = self.images2tensor(processed_imgs)
-        result = self.classify(tensor)
-
-        return result
+        return self.classify(tensor)
 
 if __name__ == "__main__":
     try:
@@ -179,8 +170,14 @@ if __name__ == "__main__":
 
         solver = RuneDetector("arrow_classifier_keras_gray.h5", label)
         logger.debug("Log start")
-        logger.debug("screen handle: " + str(solver.screen_processor.ms_get_screen_hwnd()))
-        logger.debug("screen rect: " + str(solver.screen_processor.ms_get_screen_rect(solver.screen_processor.ms_get_screen_hwnd())))
+        logger.debug(
+            f"screen handle: {str(solver.screen_processor.ms_get_screen_hwnd())}"
+        )
+
+        logger.debug(
+            f"screen rect: {str(solver.screen_processor.ms_get_screen_rect(solver.screen_processor.ms_get_screen_hwnd()))}"
+        )
+
         # solver.scrp.screen_capture(800,600, save=True, save_name="dta.png")
         logger.debug("Start processing input...")
         while True:

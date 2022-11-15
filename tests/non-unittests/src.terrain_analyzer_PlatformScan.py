@@ -29,7 +29,13 @@ while True:
         print(key)
         for obj in val.solutions:
             print(obj)
-        print("last visit:", val.last_visit if val.last_visit <= len(pathextractor.platforms) * 2 -1 else "@@@@@@" + str(val.last_visit))
+        print(
+            "last visit:",
+            val.last_visit
+            if val.last_visit <= len(pathextractor.platforms) * 2 - 1
+            else f"@@@@@@{str(val.last_visit)}",
+        )
+
         print("-------------------")
 
     time.sleep(5)

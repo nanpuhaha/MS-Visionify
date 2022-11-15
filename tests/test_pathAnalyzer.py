@@ -49,10 +49,11 @@ class TestPathAnalyzer(TestCase):
     def test_generate_solution_dict(self):
         analyzer = PathAnalyzer()
         analyzer.load(TEST_VALID_PLATFORM__DIR)
-        error = False
-        for hash1 in analyzer.platforms.keys():
-            if analyzer.platforms[hash1].solutions == []:
-                error = True
+        error = any(
+            analyzer.platforms[hash1].solutions == []
+            for hash1 in analyzer.platforms.keys()
+        )
+
         self.assertFalse(error)
 
     def test_move_platform(self):

@@ -88,10 +88,7 @@ class KeyboardInputManager:
         :param key_code : DIK key name of key to look up. Please refer to directinput_constants.py. If undefined, returns enture key state
         :return: None"""
         if key_code:
-            if key_code in self.key_state.keys():
-                return self.key_state[key_code]
-            else:
-                return None
+            return self.key_state[key_code] if key_code in self.key_state.keys() else None
         else:
             return self.key_state
 
@@ -127,16 +124,15 @@ class KeyboardInputManager:
                     if state:
                         PressKey(keycode)
                         self.actual_key_state[keycode] = 1
-                    elif not state:
+                    else:
                         ReleaseKey(keycode)
                         self.actual_key_state[keycode] = 0
+            elif state:
+                PressKey(keycode)
+                self.actual_key_state[keycode] = 1
             else:
-                if state:
-                    PressKey(keycode)
-                    self.actual_key_state[keycode] = 1
-                elif not state:
-                    ReleaseKey(keycode)
-                    self.actual_key_state[keycode] = 0
+                ReleaseKey(keycode)
+                self.actual_key_state[keycode] = 0
 
         self.key_state = {}
 

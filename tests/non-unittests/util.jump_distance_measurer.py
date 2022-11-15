@@ -26,13 +26,12 @@ while True:
 
     playerpos = scrp.find_player_minimap_marker(area) # use minimap
     #playerpos = medal.find(scrp.gray_img) # use screen medal
-    if playerpos:
-        if playerpos != last_coords:
-            print(playerpos)
-            if is_recording:
-                jmp_coords.append(playerpos)
-                min_y = min(min_y, playerpos[1])
-            last_coords = playerpos
+    if playerpos and playerpos != last_coords:
+        print(playerpos)
+        if is_recording:
+            jmp_coords.append(playerpos)
+            min_y = min(min_y, playerpos[1])
+        last_coords = playerpos
     cv2.imshow("",imutils.resize(scrp.bgr_img[area[1]:area[1]+area[3], area[0]:area[0]+area[2]], width=400))
     inp = cv2.waitKey(1)
     if inp == ord('q'):
@@ -46,7 +45,7 @@ while True:
 
             print("recording started")
             jmp_coords.append(playerpos)
-        elif is_recording:
+        else:
             end_x = playerpos[0]
             end_y = playerpos[1]
 
@@ -58,12 +57,6 @@ while True:
             print(jmp_coords)
             print("y coord movement:", abs(start_y - min_y))
             print("x coord movement:", abs(start_x - end_x))
-
-    elif inp == ord("r"):
-        scrp.reset_minimap_area()
-        area = scrp.get_minimap_rect()
-
-
 
 start_x = 91
 start_y = 34

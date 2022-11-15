@@ -38,7 +38,7 @@ class MacroController:
         logger.addHandler(fh)
 
         self.logger = CustomLogger(logger, self.log_queue)
-        self.logger.debug("%s init"%self.__class__.__name__)
+        self.logger.debug(f"{self.__class__.__name__} init")
         self.screen_processor = sp.StaticImageProcessor(self.screen_capturer)
         self.terrain_analyzer = ta.PathAnalyzer()
         self.keyhandler = km.KeyboardInputManager()
@@ -77,50 +77,52 @@ class MacroController:
         self.unstick_attempts_threshold = 5
         # If unstick after this amount fails to get us on a known platform, abort abort.
 
-        self.logger.debug("%s init finished"%self.__class__.__name__)
+        self.logger.debug(f"{self.__class__.__name__} init finished")
 
     def load_and_process_platform_map(self, path):
         retval = self.terrain_analyzer.load(path)
         self.terrain_analyzer.generate_solution_dict()
         if retval != 0:
-            self.logger.debug("Loaded platform data %s"%(path))
+            self.logger.debug(f"Loaded platform data {path}")
         else:
-            self.logger.debug("Failed to load platform data %s, terrain_analyzer.load returned 0"%(path))
+            self.logger.debug(
+                f"Failed to load platform data {path}, terrain_analyzer.load returned 0"
+            )
+
         return retval
 
     def distance(self, x1, y1, x2, y2):
         return math.sqrt((x1-x2)**2 + (y1-y2)**2)
 
     def find_current_platform(self):
-        current_platform_hash = None
-
-        for key, platform in self.terrain_analyzer.oneway_platforms.items():
-            if self.player_manager.y >= min(platform.start_y, platform.end_y) and \
-                    self.player_manager.y <= max(platform.start_y, platform.end_y) and \
-                    self.player_manager.x >= platform.start_x and \
-                    self.player_manager.x <= platform.end_x:
-                current_platform_hash = platform.hash
-                break
+        current_platform_hash = next(
+            (
+                platform.hash
+                for key, platform in self.terrain_analyzer.oneway_platforms.items()
+                if self.player_manager.y >= min(platform.start_y, platform.end_y)
+                and self.player_manager.y <= max(platform.start_y, platform.end_y)
+                and self.player_manager.x >= platform.start_x
+                and self.player_manager.x <= platform.end_x
+            ),
+            None,
+        )
 
         for key, platform in self.terrain_analyzer.platforms.items():
             if self.player_manager.y == platform.start_y and \
-                    self.player_manager.x >= platform.start_x and \
-                    self.player_manager.x <= platform.end_x:
+                        self.player_manager.x >= platform.start_x and \
+                        self.player_manager.x <= platform.end_x:
                 current_platform_hash = platform.hash
                 break
 
         #  Add additional check to take into account imperfect platform coordinates
         for key, platform in self.terrain_analyzer.platforms.items():
             if self.player_manager.y == platform.start_y and \
-                    self.player_manager.x >= platform.start_x - self.platform_error and \
-                    self.player_manager.x <= platform.end_x + self.platform_error:
+                        self.player_manager.x >= platform.start_x - self.platform_error and \
+                        self.player_manager.x <= platform.end_x + self.platform_error:
                 current_platform_hash = platform.hash
                 break
 
-        if current_platform_hash:
-            return current_platform_hash
-        else:
-            return 0
+        return current_platform_hash or 0
 
     def find_rune_platform(self):
         """
@@ -128,28 +130,23 @@ class MacroController:
         :return: Platform hash, rune_coord_tuple of platform where the rune is located, else 0, 0 if rune does not exist
         """
         self.player_manager.update()
-        rune_coords = self.screen_processor.find_rune_marker()
-        if rune_coords:
-            rune_platform_hash = None
-            for key, platform in self.terrain_analyzer.platforms.items():
-                if rune_coords[1] >= platform.start_y - self.rune_platform_offset and \
-                        rune_coords[1] <= platform.start_y + self.rune_platform_offset and \
-                        rune_coords[0] >= platform.start_x and \
-                        rune_coords[0] <= platform.end_x:
-                    rune_platform_hash = key
-            for key, platform in self.terrain_analyzer.oneway_platforms.items():
-                if rune_coords[1] >= platform.start_y - self.rune_platform_offset and \
-                        rune_coords[1] <= platform.start_y + self.rune_platform_offset and \
-                        rune_coords[0] >= platform.start_x and \
-                        rune_coords[0] <= platform.end_x:
-                    rune_platform_hash = key
-
-            if rune_platform_hash:
-                return rune_platform_hash, rune_coords
-            else:
-                return 0, 0
-        else:
+        if not (rune_coords := self.screen_processor.find_rune_marker()):
             return 0, 0
+        rune_platform_hash = None
+        for key, platform in self.terrain_analyzer.platforms.items():
+            if rune_coords[1] >= platform.start_y - self.rune_platform_offset and \
+                        rune_coords[1] <= platform.start_y + self.rune_platform_offset and \
+                        rune_coords[0] >= platform.start_x and \
+                        rune_coords[0] <= platform.end_x:
+                rune_platform_hash = key
+        for key, platform in self.terrain_analyzer.oneway_platforms.items():
+            if rune_coords[1] >= platform.start_y - self.rune_platform_offset and \
+                        rune_coords[1] <= platform.start_y + self.rune_platform_offset and \
+                        rune_coords[0] >= platform.start_x and \
+                        rune_coords[0] <= platform.end_x:
+                rune_platform_hash = key
+
+        return (rune_platform_hash, rune_coords) if rune_platform_hash else (0, 0)
 
     def navigate_to_rune_platform(self):
         """
@@ -160,9 +157,13 @@ class MacroController:
         if not rune_platform_hash:
             return 0
         if self.current_platform_hash != rune_platform_hash:
-            rune_solutions = self.terrain_analyzer.pathfind(self.current_platform_hash, rune_platform_hash)
-            if rune_solutions:
-                self.logger.debug("paths to rune: %s" % (" ".join(x.method for x in rune_solutions)))
+            if rune_solutions := self.terrain_analyzer.pathfind(
+                self.current_platform_hash, rune_platform_hash
+            ):
+                self.logger.debug(
+                    f'paths to rune: {" ".join(x.method for x in rune_solutions)}'
+                )
+
                 for solution in rune_solutions:
                     if self.player_manager.x < solution.lower_bound[0]:
                         # We are left of solution bounds.
@@ -189,7 +190,10 @@ class MacroController:
                         time.sleep(1)
                 time.sleep(0.5)
             else:
-                self.logger.debug("could not generate path to rune platform %s from starting platform %s"%(rune_platform_hash, self.current_platform_hash))
+                self.logger.debug(
+                    f"could not generate path to rune platform {rune_platform_hash} from starting platform {self.current_platform_hash}"
+                )
+
         return 0
 
     def log_skill_usage_statistics(self):

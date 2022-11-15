@@ -2,6 +2,7 @@
 """
 Merge two directories of up,down,left,right images
 """
+
 import os, cv2, glob
 
 categories = ["up", "down", "left", "right"]
@@ -13,7 +14,7 @@ print(numberofphotos)
 
 
 for cat in categories:
-    files = glob.glob("%s/%s/*.png"%(fromdir, cat))
+    files = glob.glob(f"{fromdir}/{cat}/*.png")
     for file in files:
         numberofphotos += 1
         os.rename(file, "%s/%s/%d.png"%(todir, cat, numberofphotos))

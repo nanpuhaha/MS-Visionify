@@ -59,8 +59,12 @@ class MacroControllerAStar(macro_script.MacroController):
 
         # Check if player is on platform
         self.current_platform_hash = None
-        get_current_platform = self.find_current_platform()
-        if not get_current_platform:
+        if get_current_platform := self.find_current_platform():
+            self.platform_fail_loops = 0
+            self.unstick_attempts = 0
+            self.current_platform_hash = get_current_platform
+
+        else:
             # Move to nearest platform and redo loop
             # Failed to find platform.
             self.platform_fail_loops += 1
@@ -68,16 +72,10 @@ class MacroControllerAStar(macro_script.MacroController):
                 self.logger.debug("stuck. attempting unstick()...")
                 self.unstick_attempts += 1
                 self.unstick()
-            if self.unstick_attempts >= self.unstick_attempts_threshold:
-                self.logger.debug("unstick() threshold reached. sending error code..")
-                return -2
-            else:
+            if self.unstick_attempts < self.unstick_attempts_threshold:
                 return 0
-        else:
-            self.platform_fail_loops = 0
-            self.unstick_attempts = 0
-            self.current_platform_hash = get_current_platform
-
+            self.logger.debug("unstick() threshold reached. sending error code..")
+            return -2
         # Rune Detector
         self.player_manager.update()
         rune_platform_hash, rune_coords = self.find_rune_platform()
@@ -93,7 +91,7 @@ class MacroControllerAStar(macro_script.MacroController):
                 self.logger.debug("rune_solver.solve_auto results: %d" % (solve_result))
                 if solve_result == -1:
                     self.logger.debug("rune_solver.solve_auto failed to solve")
-                    for x in range(4):
+                    for _ in range(4):
                         self.keyhandler.single_press(dc.DIK_LEFT)
 
                 self.player_manager.last_rune_solve_time = time.time()
@@ -112,7 +110,7 @@ class MacroControllerAStar(macro_script.MacroController):
         for mid_coord, method in pathlist:
             self.player_manager.update()
             print(mid_coord, method)
-            if method == METHOD_MOVER or method == METHOD_MOVEL:
+            if method in [METHOD_MOVER, METHOD_MOVEL]:
                 self.player_manager.optimized_horizontal_move(mid_coord[0])
             elif method == METHOD_DBLJMP:
                 interdelay = self.terrain_analyzer.calculate_vertical_doublejump_delay(self.player_manager.y, mid_coord[1])

@@ -93,10 +93,7 @@ class PlatformDataCaptureWindow(tk.Toplevel):
             self.platform_listbox_menu.grab_release()
 
     def on_listbox_delete(self):
-        selected = self.platform_listbox.curselection()
-        if not selected:
-            showwarning("지형파일 생성기", "한개 이상의 항목을 선택해 주세요")
-        else:
+        if selected := self.platform_listbox.curselection():
             if askyesno("지형파일 생성기", "정말 %d개의 항목을 지우겠습니까?"%(len(selected))):
                 if self.record_mode != 0:
                     showwarning("지형파일 생성기", "진행중인 기록 먼저 종료해주세요")
@@ -110,6 +107,9 @@ class PlatformDataCaptureWindow(tk.Toplevel):
                             if idx == key:
                                 del self.terrain_analyzer.oneway_platforms[hash]
                     self.update_listbox()
+
+        else:
+            showwarning("지형파일 생성기", "한개 이상의 항목을 선택해 주세요")
 
     def update_listbox(self):
         self.platform_listbox_platform_index = {}
@@ -165,8 +165,11 @@ class PlatformDataCaptureWindow(tk.Toplevel):
         self.update_listbox()
 
     def on_save(self):
-        save_dir = asksaveasfilename(initialdir=os.getcwd(), title="저장경로 설정", filetypes=(("지형 파일(*.platform)","*.platform"),))
-        if save_dir:
+        if save_dir := asksaveasfilename(
+            initialdir=os.getcwd(),
+            title="저장경로 설정",
+            filetypes=(("지형 파일(*.platform)", "*.platform"),),
+        ):
             if ".platform" not in save_dir:
                 save_dir += ".platform"
             self.terrain_analyzer.save(save_dir, self.minimap_rect)
@@ -204,7 +207,7 @@ class PlatformDataCaptureWindow(tk.Toplevel):
                 continue
 
             self.last_coord_x, self.last_coord_y = playerpos
-            if self.record_mode == 1 or self.record_mode == 2:
+            if self.record_mode in [1, 2]:
                 if (self.last_coord_x, self.last_coord_y) not in self.current_coords:
                     self.current_coords.append((self.last_coord_x, self.last_coord_y))
                 if self.record_mode == 1:
@@ -224,8 +227,7 @@ class PlatformDataCaptureWindow(tk.Toplevel):
                 cv2.line(cropped_img, (playerpos[0], 0), (playerpos[0], cropped_img.shape[0]), (0,0,0), 1)
                 cv2.line(cropped_img, (0, playerpos[1]), (cropped_img.shape[1], playerpos[1]), (0, 0, 0), 1)
 
-            selected = self.platform_listbox.curselection()
-            if selected:
+            if selected := self.platform_listbox.curselection():
                 for idx in selected:
                     for key, hash in self.platform_listbox_platform_index.items():
                         if idx == key:

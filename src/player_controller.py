@@ -30,9 +30,7 @@ class PlayerController:
         self.y = None
 
 
-        self.keymap = {}
-        for key, value in keymap.items():
-            self.keymap[key] = value[0]
+        self.keymap = {key: value[0] for key, value in keymap.items()}
         self.jump_key = self.keymap["jump"]
         self.key_mgr = key_mgr
         self.screen_processor = screen_handler
@@ -87,15 +85,10 @@ class PlayerController:
         # Initialization code for self.randomize_skill
         self.thousand_sword_percent = 30
         self.shield_chase_percent = 40
-        self.choices = []
+        self.choices = [1 for _ in range(self.thousand_sword_percent)]
 
-        for obj in range(self.thousand_sword_percent):
-            self.choices.append(1)
-        for obj in range(self.shield_chase_percent):
-            self.choices.append(2)
-
-        for obj in range(100 - len(self.choices)):
-            self.choices.append(0)
+        self.choices.extend(2 for _ in range(self.shield_chase_percent))
+        self.choices.extend(0 for _ in range(100 - len(self.choices)))
 
     def update(self, player_coords_x=None, player_coords_y=None):
         """
@@ -106,8 +99,7 @@ class PlayerController:
         """
         if not player_coords_x:
             self.screen_processor.update_image()
-            scrp_ret_val = self.screen_processor.find_player_minimap_marker()
-            if scrp_ret_val:
+            if scrp_ret_val := self.screen_processor.find_player_minimap_marker():
                 player_coords_x, player_coords_y = scrp_ret_val
             else:
                 #raise Exception("screen_processor did not return coordinates!!")
@@ -263,18 +255,13 @@ class PlayerController:
                 self.key_mgr._direct_press(DIK_RIGHT)
 
                 # Below: use a loop to continously press right until goal is reached or time is up
-                while True:
-                    if time.time()-start_time > time_limit:
-                        break
-
+                while not time.time() - start_time > time_limit:
                     self.update()
                     # Problem with synchonizing player_pos with self.x and self.y. Needs to get resolved.
                     # Current solution: Just call self.update() (not good for redundancy)
                     if self.x >= goal_x - self.horizontal_goal_offset:
                         # Reached or exceeded destination x coordinates
                         break
-
-                self.key_mgr._direct_release(DIK_RIGHT)
 
             else:
                 # Distance is quite big, so we glide
@@ -285,17 +272,13 @@ class PlayerController:
                 self.key_mgr._direct_release(self.jump_key)
                 time.sleep(abs(0.1+self.random_duration(gen_range=0.15)))
                 self.key_mgr._direct_press(self.jump_key)
-                while True:
-                    if time.time() - start_time > time_limit:
-                        break
-
+                while not time.time() - start_time > time_limit:
                     self.update()
                     if self.x >= goal_x - self.horizontal_goal_offset * 3:
                         break
                 self.key_mgr._direct_release(self.jump_key)
                 time.sleep(0.1 + self.random_duration())
-                self.key_mgr._direct_release(DIK_RIGHT)
-
+            self.key_mgr._direct_release(DIK_RIGHT)
 
         elif loc_delta > 0:
             # we are moving to the left
@@ -305,18 +288,13 @@ class PlayerController:
                 self.key_mgr._direct_press(DIK_LEFT)
 
                 # Below: use a loop to continously press left until goal is reached or time is up
-                while True:
-                    if time.time()-start_time > time_limit:
-                        break
-
+                while not time.time() - start_time > time_limit:
                     self.update()
                     # Problem with synchonizing player_pos with self.x and self.y. Needs to get resolved.
                     # Current solution: Just call self.update() (not good for redundancy)
                     if self.x <= goal_x + self.horizontal_goal_offset:
                         # Reached or exceeded destination x coordinates
                         break
-
-                self.key_mgr._direct_release(DIK_LEFT)
 
             else:
                 # Distance is quite big, so we glide
@@ -327,16 +305,14 @@ class PlayerController:
                 self.key_mgr._direct_release(self.jump_key)
                 time.sleep(abs(0.1+self.random_duration(gen_range=0.15)))
                 self.key_mgr._direct_press(self.jump_key)
-                while True:
-                    if time.time() - start_time > time_limit:
-                        break
-
+                while not time.time() - start_time > time_limit:
                     self.update()
                     if self.x <= goal_x + self.horizontal_goal_offset * 3:
                         break
                 self.key_mgr._direct_release(self.jump_key)
                 time.sleep(0.1 + self.random_duration())
-                self.key_mgr._direct_release(DIK_LEFT)
+
+            self.key_mgr._direct_release(DIK_LEFT)
 
     def horizontal_move_goal(self, goal_x):
         """
@@ -506,27 +482,44 @@ class PlayerController:
         time.sleep(self.moonlight_slash_delay)
 
     def thousand_sword(self):
-        if time.time() - self.last_thousand_sword_time > self.thousand_sword_cooldown:
-            self.update()
-            if self.distance((self.x, self.y), self.last_thousand_sword_coords if self.last_thousand_sword_coords else (1000,1000)) >= self.min_thousand_sword_distance or \
-                    time.time() - self.last_thousand_sword_time > self.thousand_sword_cooldown*3:
-                self.key_mgr.single_press(self.keymap["thousand_sword"], additional_duration=abs(self.random_duration()))
-                self.last_thousand_sword_time = time.time()
-                self.skill_cast_counter += 1
-                self.last_thousand_sword_coords = (self.x, self.y)
-                self.overload_stack += 5
-                print("thousand sword cast")
-                time.sleep(self.thousand_sword_delay)
+        if (
+            time.time() - self.last_thousand_sword_time
+            <= self.thousand_sword_cooldown
+        ):
+            return
+        self.update()
+        if (
+            self.distance(
+                (self.x, self.y), self.last_thousand_sword_coords or (1000, 1000)
+            )
+            >= self.min_thousand_sword_distance
+            or time.time() - self.last_thousand_sword_time
+            > self.thousand_sword_cooldown * 3
+        ):
+            self.key_mgr.single_press(self.keymap["thousand_sword"], additional_duration=abs(self.random_duration()))
+            self.last_thousand_sword_time = time.time()
+            self.skill_cast_counter += 1
+            self.last_thousand_sword_coords = (self.x, self.y)
+            self.overload_stack += 5
+            print("thousand sword cast")
+            time.sleep(self.thousand_sword_delay)
 
     def shield_chase(self):
-        if time.time() - self.last_shield_chase_time > self.shield_chase_cooldown:
-            if self.distance((self.x, self.y), self.last_shield_chase_coords if self.last_shield_chase_coords else (1000,1000)) >= self.min_shield_chase_distance or \
-                    time.time() - self.last_shield_chase_time > self.shield_chase_cooldown*3:
-
-                self.update()
-                cast_yccords = self.y
-                self.key_mgr.single_press(self.keymap["shield_chase"], additional_duration=abs(self.random_duration()))
-                """self.key_mgr.single_press(DIK_ALT)
+        if (
+            time.time() - self.last_shield_chase_time > self.shield_chase_cooldown
+            and (
+                self.distance(
+                    (self.x, self.y), self.last_shield_chase_coords or (1000, 1000)
+                )
+                >= self.min_shield_chase_distance
+                or time.time() - self.last_shield_chase_time
+                > self.shield_chase_cooldown * 3
+            )
+        ):
+            self.update()
+            cast_yccords = self.y
+            self.key_mgr.single_press(self.keymap["shield_chase"], additional_duration=abs(self.random_duration()))
+            """self.key_mgr.single_press(DIK_ALT)
                 self.update()
                 after_cast_ycoords = self.y
                 print("shield chase cast")
@@ -543,9 +536,9 @@ class PlayerController:
                     print("shield chase cast - not casted")
                     time.sleep(0.2)
                     return 1"""
-                # Disabled skill usage check for now
-                self.skill_cast_counter += 1
-                return 0
+            # Disabled skill usage check for now
+            self.skill_cast_counter += 1
+            return 0
 
     def holy_symbol(self):
         if time.time() - self.last_holy_symbol_time > self.holy_symbol_cooldown + random.randint(0, 14):
@@ -577,10 +570,7 @@ class PlayerController:
             return 1
         elif selection == 2:
             retval = self.shield_chase()
-            if retval == 0:
-                return 2
-            else:
-                return 0
+            return 2 if retval == 0 else 0
 
     def random_duration(self, gen_range=0.1, digits=2):
         """

@@ -13,7 +13,7 @@ while True:
     scrp.update_image(set_focus=False)
     #print("minimap area", area)
 
-    if not area == 0:
+    if area != 0:
 
         playerpos = scrp.find_player_minimap_marker(area)
 
@@ -57,4 +57,4 @@ while True:
 
     elif inp == ord("s"):
         filename = input("file name(with extension)?")
-        pathextractor.save(filename+".platform", area)
+        pathextractor.save(f"{filename}.platform", area)

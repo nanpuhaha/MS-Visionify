@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 """Classifier model verifier"""
+
 import sys
 sys.path.append("../src")
 
@@ -39,9 +40,8 @@ if mode == str(1):
         print(os.path.join(os.getcwd(), _images[x]))
     img2tensor = np.vstack([np.reshape(x, [1,60,60,1]).astype(np.float32) for x in images])
     res = model.predict(img2tensor, batch_size=4)
-    index = 0
     print(res)
-    for result in res:
+    for index, result in enumerate(res):
         final_class = np.argmax(result, axis=-1)
         for key, val in labels.items():
             if final_class == val:
@@ -50,8 +50,6 @@ if mode == str(1):
         cv2.imshow(str(result), images[index])
         cv2.waitKeyEx(0)
         cv2.destroyAllWindows()
-        index += 1
-
 elif mode == str(2):
     x, y, w, h = 450, 180, 500, 130
     ds = None
@@ -106,8 +104,7 @@ elif mode == str(2):
     circle_roi = sorted(circle_roi, key=lambda x: x[1][0])
     img2tensor = np.vstack([x[0] for x in circle_roi])
     res = model.predict(img2tensor, batch_size=4)
-    index = 0
-    for result in res:
+    for index, result in enumerate(res):
         final_class = np.argmax(result, axis=-1)
         for key, val in labels.items():
             if final_class == val:
@@ -117,4 +114,3 @@ elif mode == str(2):
 
         cv2.waitKeyEx(0)
         cv2.destroyAllWindows()
-        index += 1

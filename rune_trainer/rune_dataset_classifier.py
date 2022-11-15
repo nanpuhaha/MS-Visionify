@@ -52,8 +52,6 @@ for _img in images:
                 print(os.path.join(traindata_path, "right", "%d.png"%(numberofphotos+total+1)))
                 total += 1
                 img_path = "right"
-            else:
-                pass
 with open("../cropped/labeldata.txt", "w") as b:
     b.write(str(numberofphotos+total))
 print("added %d new images"%(total))

@@ -48,7 +48,7 @@ def macro_loop(input_queue, output_queue):
             time.sleep(0.5)
             if not input_queue.empty():
                 command = input_queue.get()
-                logger.debug("recieved command {}".format(command))
+                logger.debug(f"recieved command {command}")
                 if command[0] == "start":
                     logger.debug("starting MacroController...")
                     keymap = command[1]
@@ -149,7 +149,7 @@ class MainScreen(tk.Frame):
         while not self.macro_process_in_queue.empty():
             output = self.macro_process_in_queue.get()
             if output[0] == "log":
-                self.log("Process - "+str(output[1]))
+                self.log(f"Process - {str(output[1])}")
             elif output[0] == "stopped":
                 self.log("봇 프로세스가 종료되었습니다.")
             elif output[0] == "exception":
@@ -170,32 +170,31 @@ class MainScreen(tk.Frame):
     def start_macro(self):
         if not self.macro_process:
             self.toggle_macro_process()
-        keymap = self.get_keymap()
-        if not keymap:
-            showerror(APP_TITLE, "키설정을 읽어오지 못했습니다. 키를 다시 설정해주세요.")
-        else:
+        if keymap := self.get_keymap():
             if not self.platform_file_dir.get():
                 showwarning(APP_TITLE, "지형 파일을 선택해 주세요.")
-            else:
-                if not MapleScreenCapturer().ms_get_screen_hwnd():
-                    showwarning(APP_TITLE, "메이플 창을 찾지 못했습니다. 메이플을 실행해 주세요")
+            elif MapleScreenCapturer().ms_get_screen_hwnd():
+
+                cap = MapleScreenCapturer()
+                hwnd = cap.ms_get_screen_hwnd()
+                rect = cap.ms_get_screen_rect(hwnd)
+                self.log("MS hwnd", hwnd)
+                self.log("MS rect", rect)
+                self.log("Out Queue put:", self.platform_file_dir.get())
+                if rect[0] < 0 or rect[1] < 0:
+                    showwarning(APP_TITLE, "메이플 창 위치를 가져오는데 실패했습니다.\n메이플 촹의 좌측 상단 코너가 화면 내에 있도록 메이플 창을 움직여주세요.")
+
                 else:
+                    cap.capture()
+                    self.macro_process_out_queue.put(("start", keymap, self.platform_file_dir.get()))
+                    self.macro_start_button.configure(state=DISABLED)
+                    self.macro_end_button.configure(state=NORMAL)
+                    self.platform_file_button.configure(state=DISABLED)
 
-                    cap = MapleScreenCapturer()
-                    hwnd = cap.ms_get_screen_hwnd()
-                    rect = cap.ms_get_screen_rect(hwnd)
-                    self.log("MS hwnd", hwnd)
-                    self.log("MS rect", rect)
-                    self.log("Out Queue put:", self.platform_file_dir.get())
-                    if rect[0] < 0 or rect[1] < 0:
-                        showwarning(APP_TITLE, "메이플 창 위치를 가져오는데 실패했습니다.\n메이플 촹의 좌측 상단 코너가 화면 내에 있도록 메이플 창을 움직여주세요.")
-
-                    else:
-                        cap.capture()
-                        self.macro_process_out_queue.put(("start", keymap, self.platform_file_dir.get()))
-                        self.macro_start_button.configure(state=DISABLED)
-                        self.macro_end_button.configure(state=NORMAL)
-                        self.platform_file_button.configure(state=DISABLED)
+            else:
+                showwarning(APP_TITLE, "메이플 창을 찾지 못했습니다. 메이플을 실행해 주세요")
+        else:
+            showerror(APP_TITLE, "키설정을 읽어오지 못했습니다. 키를 다시 설정해주세요.")
 
     def stop_macro(self):
         self.macro_process_out_queue.put(("stop",))
@@ -216,9 +215,7 @@ class MainScreen(tk.Frame):
                     return keymap
 
     def log(self, *args):
-        res_txt = []
-        for arg in args:
-            res_txt.append(str(arg))
+        res_txt = [str(arg) for arg in args]
         self.log_text_area.insert(END, " ".join(res_txt)+"\n")
         self.log_text_area.see(END)
 
@@ -259,8 +256,11 @@ class MainScreen(tk.Frame):
             self.macro_process_toggle_button.configure(text="실행하기")
 
     def onPlatformFileSelect(self):
-        platform_file_path = askopenfilename(initialdir=os.getcwd(), title="지형파일 선택", filetypes=(("지형 파일(*.platform)", "*.platform"),))
-        if platform_file_path:
+        if platform_file_path := askopenfilename(
+            initialdir=os.getcwd(),
+            title="지형파일 선택",
+            filetypes=(("지형 파일(*.platform)", "*.platform"),),
+        ):
             if os.path.exists(platform_file_path):
                 with open(platform_file_path, "rb") as f:
                     try:
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     root = tk.Tk()
 
-    root.title(args["title"] if args["title"] else APP_TITLE)
+    root.title(args["title"] or APP_TITLE)
     root.resizable(0,0)
     root.wm_minsize()
     #CreatePlatformFileFrame(root)

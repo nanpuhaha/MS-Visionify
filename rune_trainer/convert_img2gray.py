@@ -1,6 +1,7 @@
 """
 RGB to Grayscale batch converter.
 """
+
 import os, cv2, glob
 
 categories = ["up", "down", "left", "right"]
@@ -10,7 +11,7 @@ os.chdir("images/cropped")
 
 for fdir in subdirs:
     for cat in categories:
-        files = glob.glob("%s/%s/*.png"%(fdir, cat))
+        files = glob.glob(f"{fdir}/{cat}/*.png")
         for file in files:
             img = cv2.imread(file)
             ds = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)

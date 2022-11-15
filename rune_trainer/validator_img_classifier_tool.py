@@ -28,5 +28,3 @@ for _img in images:
     elif dt == 2555904:
         os.rename(_img, _img.split(".")[0] + "-right" + ".png")
         img_path = "right"
-    else:
-        pass

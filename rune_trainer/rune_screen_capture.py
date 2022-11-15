@@ -27,7 +27,7 @@ while True:
         break
     elif inp == ord("s"):
         SetForegroundWindow(cap.ms_get_screen_hwnd())
-        for t in range(5):
+        for _ in range(5):
             time.sleep(1)
             kbd.single_press(DIK_SPACE)
             time.sleep(0.3)
@@ -43,7 +43,7 @@ while True:
             highest = highest + 1
             cv2.imwrite("output%d.png"%(highest), ds)
             print("saved", "output%d.png"%(highest))
-            for g in range(3):
+            for _ in range(3):
                 kbd.single_press(DIK_UP)
                 time.sleep(0.2)
             time.sleep(3)

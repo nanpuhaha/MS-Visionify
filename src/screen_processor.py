@@ -19,10 +19,7 @@ class MapleScreenCapturer:
 
     def ms_get_screen_hwnd(self):
         window_hwnd = win32gui.FindWindow(0, MAPLESTORY_WINDOW_TITLE)
-        if not window_hwnd:
-            return 0
-        else:
-            return window_hwnd
+        return window_hwnd or 0
 
     def ms_get_screen_rect(self, hwnd):
         """
@@ -43,12 +40,11 @@ class MapleScreenCapturer:
               ctypes.byref(rect),
               ctypes.sizeof(rect)
               )
-            size = (rect.left, rect.top, rect.right, rect.bottom)
+            return rect.left, rect.top, rect.right, rect.bottom
         else:
             if not hwnd:
                 hwnd = self.ms_get_screen_hwnd()
-            size = win32gui.GetWindowRect(hwnd)
-        return size  # returns x1, y1, x2, y2
+            return win32gui.GetWindowRect(hwnd)
 
     def capture(self, set_focus=True, hwnd=None, rect=None):
         """Returns Maplestory window screenshot handle(not np.array!)
@@ -65,8 +61,7 @@ class MapleScreenCapturer:
         if set_focus:
             win32gui.SetForegroundWindow(self.hwnd)
             time.sleep(0.1)
-        img = ImageGrab.grab(rect)
-        return img
+        return ImageGrab.grab(rect)
 
     def screen_capture(self,w, h, x=0, y=0, save=True, save_name=''):
         # hwnd = win32gui.FindWindow(None, None)
@@ -170,7 +165,11 @@ class StaticImageProcessor:
             biggest_contour = max(contours, key = cv2.contourArea)
             if cv2.contourArea(biggest_contour) >= 100 and cv2.contourArea(biggest_contour) >= self.minimap_area and cv2.contourArea(biggest_contour) <= self.maximum_minimap_area:
                 minimap_coords = cv2.boundingRect(biggest_contour)
-                if minimap_coords[0] > 0 and minimap_coords[1] > 0 and minimap_coords[2] > 0 and minimap_coords[2] > 0:
+                if (
+                    minimap_coords[0] > 0
+                    and minimap_coords[1] > 0
+                    and minimap_coords[2] > 0
+                ):
                     contour_area = cv2.contourArea(biggest_contour)
                     self.minimap_area = contour_area
                     minimap_coords = [minimap_coords[0], minimap_coords[1], minimap_coords[2], minimap_coords[3]]
@@ -178,9 +177,6 @@ class StaticImageProcessor:
                     minimap_coords[1] += self.default_minimap_scan_area[1]
                     self.minimap_rect = minimap_coords
                     return minimap_coords
-                else:
-                    pass
-
         return 0
 
     def reset_minimap_area(self):
@@ -200,11 +196,11 @@ class StaticImageProcessor:
         :param rect: [x,y,w,h] bounding box of minimap in MapleStory screen. Call self.get_minimap_rect to obtain
         :return: x,y coordinate of player relative to ms_screen_rect if found, else 0
         """
-        if not rect and not self.minimap_rect:
-            rect = self.get_minimap_rect()
-        else:
+        if rect or self.minimap_rect:
             rect = self.minimap_rect
 
+        else:
+            rect = self.get_minimap_rect()
         assert rect, "Invalid minimap coordinates"
 
         cropped = self.bgr_img[rect[1]:rect[1]+rect[3], rect[0]:rect[0]+rect[2]]
@@ -216,11 +212,14 @@ class StaticImageProcessor:
             avg_y = 0
             totalpoints = 0
             for coord in td:
-                nearest_points = 0  # Points which are close to coord pixel
-                for ref_coord in td:
-                    # Calculate the range between every single pixel
-                    if math.sqrt(abs(ref_coord[0]-coord[0])**2 + abs(ref_coord[1]-coord[1])**2) <= 3:
-                        nearest_points += 1
+                nearest_points = sum(
+                    math.sqrt(
+                        abs(ref_coord[0] - coord[0]) ** 2
+                        + abs(ref_coord[1] - coord[1]) ** 2
+                    )
+                    <= 3
+                    for ref_coord in td
+                )
 
                 if nearest_points >= 10 and nearest_points <= 13:
                     avg_y += coord[0]
@@ -271,10 +270,10 @@ class StaticImageProcessor:
         :param rect: [x,y,w,h] bounding box of minimap. Call self.get_minimap_rect
         :return: x,y of rune minimap coordinates if found, else 0
         """
-        if not rect and not self.minimap_rect:
-            rect = self.get_minimap_rect()
-        else:
+        if rect or self.minimap_rect:
             rect = self.minimap_rect
+        else:
+            rect = self.get_minimap_rect()
         assert rect, "Invalid minimap coordinates"
         cropped = self.bgr_img[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
         mask = cv2.inRange(cropped, self.lower_rune_marker, self.upper_rune_marker)
@@ -284,11 +283,14 @@ class StaticImageProcessor:
             avg_y = 0
             totalpoints = 0
             for coord in td:
-                nearest_points = 0  # Points which are close to coord pixel
-                for ref_coord in td:
-                    # Calculate the range between every single pixel
-                    if math.sqrt(abs(ref_coord[0] - coord[0]) ** 2 + abs(ref_coord[1] - coord[1]) ** 2) <= 6:
-                        nearest_points += 1
+                nearest_points = sum(
+                    math.sqrt(
+                        abs(ref_coord[0] - coord[0]) ** 2
+                        + abs(ref_coord[1] - coord[1]) ** 2
+                    )
+                    <= 6
+                    for ref_coord in td
+                )
 
                 if nearest_points >= 20 and nearest_points <= 25:
                     avg_y += coord[0]

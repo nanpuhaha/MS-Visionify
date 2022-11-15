@@ -51,12 +51,9 @@ def onrightclick(event):
         cv.create_rectangle(sc[0] * tile_size, sc[1] * tile_size,
                             (sc[0] + 1) * tile_size,
                             (sc[1] + 1) * tile_size, fill="purple")
-        if index == 0:
-            old_coord = start_coord
-        else:
-            old_coord = path[index - 1][0]
+        old_coord = start_coord if index == 0 else path[index - 1][0]
         mtype = method[1]
-        if mtype == "l" or  mtype == "r":
+        if mtype in ["l", "r"]:
             color = "green"
         elif mtype == "drop":
             color = "blue"
@@ -90,12 +87,9 @@ def onleftclick(event):
         cv.create_rectangle(sc[0] * tile_size, sc[1] * tile_size,
                             (sc[0] + 1) * tile_size,
                             (sc[1] + 1) * tile_size, fill="purple")
-        if index == 0:
-            old_coord = start_coord
-        else:
-            old_coord = path[index - 1][0]
+        old_coord = start_coord if index == 0 else path[index - 1][0]
         mtype = method[1]
-        if mtype == "l" or mtype == "r":
+        if mtype in ["l", "r"]:
             color = "green"
         elif mtype == "drop":
             color = "blue"

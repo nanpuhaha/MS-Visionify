@@ -41,8 +41,7 @@ class SetKeyMap(tk.Toplevel):
 
     def keysym2dik(self, keysym):
         try:
-            dik = keysym_map[keysym]
-            return dik
+            return keysym_map[keysym]
         except:
             return 0
 
@@ -60,7 +59,7 @@ class SetKeyMap(tk.Toplevel):
                 found = True
                 break
         if not found:
-            showwarning("키설정", "현재 지원하지 않는 키입니다. 기본 키로 초기화 됩니다."+str(event.keysym))
+            showwarning("키설정", f"현재 지원하지 않는 키입니다. 기본 키로 초기화 됩니다.{str(event.keysym)}")
             self.keymap_data[key_name] = DEFAULT_KEY_MAP[key_name]
             self.labels[key_name].set(self.dik2keysym(DEFAULT_KEY_MAP[key_name][0]))
 
